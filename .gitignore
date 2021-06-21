@@ -1,0 +1,5 @@
+*.rdb
+var*
+.vscode
+redis-failover
+coverage.out
