@@ -1,4 +1,5 @@
-module github.com/ledisdb/redis-failover
+
+module github.com/Damanchen/redis-failover
 
 go 1.14
 

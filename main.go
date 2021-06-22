@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ledisdb/redis-failover/failover"
+	"github.com/Damanchen/redis-failover/failover"
 )
 
 var configFile = flag.String("config", "", "failover config file")
@@ -16,18 +16,18 @@ var addr = flag.String("addr", "", "failover http listen addr")
 var checkInterval = flag.Int("check_interval", 0, "check master alive every n millisecond")
 var maxDownTime = flag.Int("max_down_time", 0, "max down time for a master, after that, we will do failover")
 
-var masters = flag.String("masters", "", "redis master need to be monitored, seperated by comma")
-var mastersState = flag.String("masters_state", "", "new or existing for raft, if new, we will depracted old saved masters")
+var masters = flag.String("masters", "", "redis master need to be monitored, separated by comma")
+var mastersState = flag.String("masters_state", "", "new or existing for raft, if new, we will deprecate old saved masters")
 
 var broker = flag.String("broker", "", "broker for cluster, now is raft or zk")
 
 var raftDataDir = flag.String("raft_data_dir", "", "raft data store path")
 var raftLogDir = flag.String("raft_log_dir", "", "raft log store path")
 var raftAddr = flag.String("raft_addr", "", "raft listen addr, if empty, we will disable raft")
-var raftCluster = flag.String("raft_cluster", "", "raft cluster,vseperated by comma")
+var raftCluster = flag.String("raft_cluster", "", "raft cluster, separated by comma")
 var raftClusterState = flag.String("raft_cluster_state", "", "new or existing, if new, we will deprecate old saved cluster and use new")
 
-var zkAddr = flag.String("zk_addr", "", "zookeeper address, seperated by comma")
+var zkAddr = flag.String("zk_addr", "", "zookeeper address, separated by comma")
 var zkPath = flag.String("zk_path", "", "base directory in zk, prefix must be /zk")
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 			return
 		}
 	} else {
-		fmt.Printf("no config file, use default config")
+		fmt.Printf("no config file, use default config\n")
 		c = new(failover.Config)
 		c.Addr = ":11000"
 		c.CheckInterval = 1000

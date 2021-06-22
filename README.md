@@ -1,3 +1,5 @@
+It is clone from github.com/ledisdb/redis-failover
+
 # redis-failover
 
 [![Build Status](https://travis-ci.org/ledisdb/redis-failover.svg?branch=develop)](https://travis-ci.org/ledisdb/redis-failover) [![codecov](https://codecov.io/gh/ledisdb/redis-failover/branch/master/graph/badge.svg)](https://codecov.io/gh/ledisdb/redis-failover)
@@ -12,10 +14,19 @@ redis-sentinel is very powerful, why not use it but build a new one?
 2. I want to embed it into another service like [xcodis](https://github.com/ledisdb/xcodis).
 3. I just want to learn how to build a distributed service using [raft](https://raftconsensus.github.io). :-)
 
+
+1. I want to failover dns, not only ip:port.
+
 ## Install and usage
 
 ```
 go get github.com/ledisdb/redis-failover
+```
+or:
+```bash
+git clone https://github.com/Damanchen/redis-failover.git
+cd redis-failover
+go build
 ```
 
 First you must start redis and build the replication topology by yourself. e.g, 127.0.0.1:6379 is master and 127.0.0.1:6380 is slave.

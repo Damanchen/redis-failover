@@ -15,7 +15,7 @@ type Cluster interface {
 	LeaderCh() <-chan bool
 }
 
-// save mornitored master addr
+// save monitored master addr
 type masterFSM struct {
 	sync.Mutex
 
