@@ -96,6 +96,8 @@ func main() {
 	}
 
 	seps = strings.Split(*masters, ",")
+	fmt.Printf("masters: %s\n", seps)
+
 	if len(seps) > 0 && len(seps[0]) > 0 {
 		c.Masters = seps
 	}

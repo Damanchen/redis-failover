@@ -2,6 +2,7 @@ package failover
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -74,6 +75,9 @@ func NewApp(c *Config) (*App, error) {
 		a.cluster = nil
 	}
 
+	// 这里还读不到配置的 masters 信息
+	fmt.Printf("NewApp a.masters: %s\n", a.masters.GetMasters())
+
 	if err != nil {
 		return nil, err
 	}
@@ -111,11 +115,18 @@ func (a *App) Run() {
 		}
 	}
 
+	// 在这里才开始设置或者新增 masters
+	// 如果是批量启动，就可以配置好；
+	// 如果是依次启动，就不能配置好？？！！ —— 因为 raft 没有选好 leader ，所以都不能进行 setMasters / addMasters 操作
 	if a.c.MastersState == MastersStateNew {
+		fmt.Printf("MastersStateNew, set a.c.Masters: %s\n", a.c.Masters)
 		a.setMasters(a.c.Masters)
 	} else {
+		fmt.Printf("MastersState not new , add a.c.Masters: %s\n", a.c.Masters)
 		a.addMasters(a.c.Masters)
 	}
+
+	fmt.Printf("Run before startHTTP a.masters: %s\n", a.masters.GetMasters())
 
 	go a.startHTTP()
 
@@ -143,9 +154,11 @@ func (a *App) check() {
 	}
 
 	masters := a.masters.GetMasters()
+	fmt.Printf("a.masters.GetMasters(): %s\n\n", masters)
 
 	var wg sync.WaitGroup
 	for _, master := range masters {
+		fmt.Printf("Now check master is: %s\n\n", master)
 		a.gMutex.Lock()
 		g, ok := a.groups[master]
 		if !ok {
@@ -286,10 +299,12 @@ func (a *App) delMasters(addrs []string) error {
 
 func (a *App) setMasters(addrs []string) error {
 	if a.cluster != nil {
+		// 在 raft cluster 模式下，只有 leader 才能更新 masters 信息
+		// 如果依次启动 raft 节点，当第一个节点还没有选取为主节点时，不会进行此操作，会导致 masters 节点赋值失败，不能正常进行监测
 		if a.cluster.IsLeader() {
 			return a.cluster.SetMasters(addrs, 10*time.Second)
 		} else {
-			log.Infof("%s is not leader, skip", a.c.Addr)
+			log.Infof("[setMasters] %s is not leader, skip", a.c.Addr)
 		}
 	} else {
 		a.masters.SetMasters(addrs)

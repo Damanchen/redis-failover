@@ -6,7 +6,7 @@ masters = ["127.0.0.1:6379"]
 
 # Monitored masters state, new or exising
 # after service starts, we will save the current monitored masters in somewhere.
-# if new, we will use discard old saved masters and use new in the config.
+# if new, we will discard old saved masters and use new in the config.
 # if existing, we will use before saved masters + new in the config.
 # we will only save masters in some place in raft mode. 
 masters_state = "existing"
@@ -15,7 +15,7 @@ masters_state = "existing"
 check_interval = 1000
 
 # If every check in max_down_time seconds is failed, we may think the master is down, then do failover.
-# the totoal check num = max_down_time / check_interval
+# the totoal check time = max_down_time * check_interval
 max_down_time = 3
 
 # zk, raft 
