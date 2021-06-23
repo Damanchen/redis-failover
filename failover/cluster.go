@@ -1,6 +1,7 @@
 package failover
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -69,6 +70,8 @@ func (fsm *masterFSM) SetMasters(addrs []string) {
 	defer fsm.Unlock()
 
 	fsm.masters = m
+
+	fmt.Printf("cluster.go SetMasters fsm.masters: %s\n", fsm.masters)
 }
 
 func (fsm *masterFSM) GetMasters() []string {
