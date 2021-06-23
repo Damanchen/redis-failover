@@ -16,10 +16,12 @@ func (h *masterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(strings.Join(masters, ",")))
 	case "POST":
 		masters := strings.Split(r.FormValue("masters"), ",")
-		h.a.addMasters(masters)
+		//h.a.addMasters(masters)
+		h.a.addMasters(masters, "running")
 	case "PUT":
 		masters := strings.Split(r.FormValue("masters"), ",")
-		h.a.setMasters(masters)
+		//h.a.setMasters(masters)
+		h.a.setMasters(masters, "running")
 	case "DELETE":
 		masters := strings.Split(r.FormValue("masters"), ",")
 		h.a.delMasters(masters)

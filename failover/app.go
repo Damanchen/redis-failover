@@ -120,10 +120,12 @@ func (a *App) Run() {
 	// 如果是依次启动，就不能配置好？？！！ —— 因为 raft 没有选好 leader ，所以都不能进行 setMasters / addMasters 操作
 	if a.c.MastersState == MastersStateNew {
 		fmt.Printf("MastersStateNew, set a.c.Masters: %s\n", a.c.Masters)
-		a.setMasters(a.c.Masters)
+		//a.setMasters(a.c.Masters)
+		a.setMasters(a.c.Masters, "start")
 	} else {
 		fmt.Printf("MastersState not new , add a.c.Masters: %s\n", a.c.Masters)
-		a.addMasters(a.c.Masters)
+		//a.addMasters(a.c.Masters)
+		a.addMasters(a.c.Masters, "start")
 	}
 
 	fmt.Printf("Run before startHTTP a.masters: %s\n", a.masters.GetMasters())
@@ -241,7 +243,8 @@ func (a *App) checkMaster(wg *sync.WaitGroup, g *Group) {
 		return
 	}
 
-	a.addMasters([]string{newMaster})
+	//a.addMasters([]string{newMaster})
+	a.addMasters([]string{newMaster}, "")
 
 	a.onAfterFailover(oldMaster, newMaster)
 }
@@ -262,22 +265,27 @@ func (a *App) startHTTP() {
 	s.Serve(a.l)
 }
 
-func (a *App) addMasters(addrs []string) error {
+func (a *App) addMasters(addrs []string, step string) error {
 	if len(addrs) == 0 {
 		return nil
 	}
 
 	if a.cluster != nil {
-		if a.cluster.IsLeader() {
-			return a.cluster.AddMasters(addrs, 10*time.Second)
-		} else {
-			log.Infof("%s is not leader, skip", a.c.Addr)
+		if step == "start" {
+			fmt.Printf("start raft cluster, addMasters: %s\n", addrs)
+			//return a.cluster.AddMasters(addrs, 10*time.Second)
+			a.masters.AddMasters(addrs)
+		}else{
+			if a.cluster.IsLeader() {
+				return a.cluster.AddMasters(addrs, 10*time.Second)
+			} else {
+				log.Infof("%s is not leader, skip", a.c.Addr)
+			}
 		}
 	} else {
 		a.masters.AddMasters(addrs)
 	}
 	return nil
-
 }
 
 func (a *App) delMasters(addrs []string) error {
@@ -297,14 +305,21 @@ func (a *App) delMasters(addrs []string) error {
 	return nil
 }
 
-func (a *App) setMasters(addrs []string) error {
+func (a *App) setMasters(addrs []string, step string) error {
 	if a.cluster != nil {
 		// 在 raft cluster 模式下，只有 leader 才能更新 masters 信息
 		// 如果依次启动 raft 节点，当第一个节点还没有选取为主节点时，不会进行此操作，会导致 masters 节点赋值失败，不能正常进行监测
-		if a.cluster.IsLeader() {
-			return a.cluster.SetMasters(addrs, 10*time.Second)
-		} else {
-			log.Infof("[setMasters] %s is not leader, skip", a.c.Addr)
+		// 所以需要加上一个标志位，用于判断第一次启动 raft
+		if step == "start" {
+			fmt.Printf("start raft cluster, setMasters: %s\n", addrs)
+			a.masters.SetMasters(addrs)
+			//return a.cluster.SetMasters(addrs, 10*time.Second)
+		} else{
+			if a.cluster.IsLeader() {
+				return a.cluster.SetMasters(addrs, 10*time.Second)
+			} else {
+				log.Infof("[setMasters] %s is not leader, skip", a.c.Addr)
+			}
 		}
 	} else {
 		a.masters.SetMasters(addrs)
