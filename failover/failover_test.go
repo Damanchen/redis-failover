@@ -19,7 +19,7 @@ var zkAddr = flag.String("zk", "", "zookeeper address, seperated by comma")
 
 func Test(t *testing.T) {
 	// FIXME: currently skip this test until a new test enviroment ready.
-	t.Skip()
+	//t.Skip()
 	TestingT(t)
 }
 
@@ -28,7 +28,7 @@ type failoverTestSuite struct {
 
 var _ = Suite(&failoverTestSuite{})
 
-var testPort = []int{16379, 16380, 16381}
+var testPort = []int{6379, 6380, 6666, 6668}
 
 func (s *failoverTestSuite) SetUpSuite(c *C) {
 	_, err := exec.LookPath("redis-server")
@@ -43,6 +43,7 @@ func (s *failoverTestSuite) SetUpTest(c *C) {
 	for _, port := range testPort {
 		s.stopRedis(c, port)
 		s.startRedis(c, port)
+		//s.doCommand(c, port, "info", "memory")
 		s.doCommand(c, port, "SLAVEOF", "NO", "ONE")
 		s.doCommand(c, port, "FLUSHALL")
 	}
@@ -73,9 +74,14 @@ func (r *redisChecker) Write(data []byte) (int, error) {
 }
 
 func (s *failoverTestSuite) startRedis(c *C, port int) {
-	checker := &redisChecker{ok: false}
+	// FIXME: 关于Redis实例启动成功的判断还得优化.
+	//checker := &redisChecker{ok: false}
+	checker := &redisChecker{ok: true}
 	// start redis and use memory only
-	cmd := exec.Command("redis-server", "--port", fmt.Sprintf("%d", port), "--save", "")
+	cmd_args := fmt.Sprintf("%s%d%s", "/usr/local/opt/redis/redis_", port, "/etc/redis.conf")
+	// 注意，对于exec.Command，应当将shell拆分为多个参数，否则会报错：“no such file or directory”
+	cmd := exec.Command("/usr/local/opt/redis/bin/redis-server", cmd_args)
+	fmt.Printf("startRedis %d cmd is : %s\n", port, cmd)
 	cmd.Stdout = checker
 	cmd.Stderr = checker
 
@@ -87,6 +93,8 @@ func (s *failoverTestSuite) startRedis(c *C, port int) {
 		checker.Lock()
 		ok = checker.ok
 		checker.Unlock()
+
+		//fmt.Printf("ok is: %v\n", ok)
 
 		if ok {
 			return
@@ -100,10 +108,17 @@ func (s *failoverTestSuite) startRedis(c *C, port int) {
 func (s *failoverTestSuite) stopRedis(c *C, port int) {
 	cmd := exec.Command("redis-cli", "-p", fmt.Sprintf("%d", port), "shutdown", "nosave")
 	cmd.Run()
+	fmt.Printf("shutdown %d ...\n", port)
 }
 
 func (s *failoverTestSuite) doCommand(c *C, port int, cmd string, cmdArgs ...interface{}) interface{} {
 	conn, err := redis.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+
+	// 可能会连接失败，手动加上重试
+	for retries := 0; err != nil && retries < 5; retries++ {
+		time.Sleep(50 * time.Millisecond)
+		conn, err = redis.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	}
 	c.Assert(err, IsNil)
 
 	v, err := conn.Do(cmd, cmdArgs...)
@@ -112,6 +127,7 @@ func (s *failoverTestSuite) doCommand(c *C, port int, cmd string, cmdArgs ...int
 }
 
 func (s *failoverTestSuite) TestSimpleCheck(c *C) {
+	fmt.Printf("run TestSimpleCheck\n")
 	cfg := new(Config)
 	cfg.Addr = ":11000"
 
@@ -211,7 +227,7 @@ func (s *failoverTestSuite) testOneClusterFailoverCheck(c *C, broker string) {
 	port := testPort[0]
 	masterAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
-	err := app.addMasters([]string{masterAddr})
+	err := app.addMasters([]string{masterAddr}, "start")
 	c.Assert(err, IsNil)
 
 	ch := s.addBeforeHandler(app)
@@ -246,7 +262,7 @@ func (s *failoverTestSuite) testMultiClusterFailoverCheck(c *C, broker string) {
 	port := testPort[0]
 	masterAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
-	err := app.addMasters([]string{masterAddr})
+	err := app.addMasters([]string{masterAddr}, "start")
 	c.Assert(err, IsNil)
 
 	ch := s.addBeforeHandler(app)
@@ -277,7 +293,7 @@ func (s *failoverTestSuite) testMultiClusterFailoverCheck(c *C, broker string) {
 	// wait other two elect new leader
 	app = s.checkLeader(c, apps)
 
-	err = app.addMasters([]string{masterAddr})
+	err = app.addMasters([]string{masterAddr}, "running")
 	c.Assert(err, IsNil)
 
 	ch = s.addBeforeHandler(app)
